@@ -1,0 +1,4 @@
+# Sensitive credentials — never commit these
+token
+mcp.json
+jira-credentials.txt
