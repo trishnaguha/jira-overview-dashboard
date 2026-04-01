@@ -17,6 +17,13 @@ A CLI tool that queries JIRA live and generates both a **terminal dashboard** an
 - Python 3 with `pip` (for mcp-atlassian setup)
 - JIRA API token
 
+## Clone the project and move to the working directory
+
+```bash
+git clone https://github.com/trishnaguha/jira-overview-dashboard.git
+cd jira-overview-dashaboard
+```
+
 ## Setup — MCP Atlassian Integration
 
 Before running the dashboard, set up `mcp-atlassian` and configure your JIRA credentials.
@@ -79,8 +86,6 @@ This gives Claude Code direct access to your JIRA instance via the MCP protocol.
 ## Usage
 
 ```bash
-# Navigate to the project
-cd jira-overview-dashboard
 
 # Default components (portal, dev-tools) — outputs CLI + generates HTML
 bash jira-dashboard-cli.sh
