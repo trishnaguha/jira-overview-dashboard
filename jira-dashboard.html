@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JIRA Dashboard — ANSTRAT, AAP & ACA</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-hover: #222531;
+      --border: #2a2d3a;
+      --text: #e1e4ed;
+      --text-muted: #8b8fa3;
+      --accent: #6c8cff;
+      --critical: #ff5c5c;
+      --critical-bg: rgba(255, 92, 92, 0.12);
+      --major: #ff9f43;
+      --major-bg: rgba(255, 159, 67, 0.12);
+      --normal: #54d9a8;
+      --normal-bg: rgba(84, 217, 168, 0.12);
+      --undefined: #94a3b8;
+      --undefined-bg: rgba(148, 163, 184, 0.12);
+      --blocker: #ef4444;
+      --blocker-bg: rgba(239, 68, 68, 0.12);
+      --minor: #60a5fa;
+      --minor-bg: rgba(96, 165, 250, 0.12);
+      --trivial: #a1a1aa;
+      --trivial-bg: rgba(161, 161, 170, 0.12);
+      --portal: #a78bfa;
+      --portal-bg: rgba(167, 139, 250, 0.12);
+      --devtools: #38bdf8;
+      --devtools-bg: rgba(56, 189, 248, 0.12);
+      --networking: #2dd4bf;
+      --networking-bg: rgba(45, 212, 191, 0.12);
+      --in-progress: #fbbf24;
+      --in-progress-bg: rgba(251, 191, 36, 0.12);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem;
+    }
+    .header { text-align: center; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+    .header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+    .header .subtitle { color: var(--text-muted); font-size: 0.9rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; text-align: center; transition: transform 0.15s, border-color 0.15s; }
+    .stat-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .stat-card .stat-value { font-size: 2rem; font-weight: 700; line-height: 1.2; }
+    .stat-card .stat-label { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.2rem; }
+    .project-section { margin-bottom: 2.5rem; }
+    .project-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+    .project-header h2 { font-size: 1.3rem; font-weight: 600; }
+    .project-badge { background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 20px; }
+    .project-filter { font-size: 0.75rem; color: var(--text-muted); font-style: italic; margin-left: auto; }
+    .priority-group { margin-bottom: 1.5rem; }
+    .priority-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.3rem 0.7rem; border-radius: 6px; display: inline-block; margin-bottom: 0.75rem; }
+    .priority-label.critical { color: var(--critical); background: var(--critical-bg); }
+    .priority-label.major { color: var(--major); background: var(--major-bg); }
+    .priority-label.normal { color: var(--normal); background: var(--normal-bg); }
+    .priority-label.undefined { color: var(--undefined); background: var(--undefined-bg); }
+    .priority-label.blocker { color: var(--blocker); background: var(--blocker-bg); }
+    .priority-label.minor { color: var(--minor); background: var(--minor-bg); }
+    .priority-label.trivial { color: var(--trivial); background: var(--trivial-bg); }
+    .issue-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5rem; }
+    .issue-table thead th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); }
+    .issue-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+    .issue-table tbody tr:hover { background: var(--surface-hover); }
+    .issue-table td { padding: 0.7rem 0.8rem; font-size: 0.88rem; vertical-align: middle; }
+    .issue-key { font-weight: 600; color: var(--accent); white-space: nowrap; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82rem; }
+    .issue-key a { color: inherit; text-decoration: none; }
+    .issue-key a:hover { text-decoration: underline; }
+    .type-badge { font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; white-space: nowrap; }
+    .type-epic { color: #6c8cff; background: rgba(108,140,255,0.12); }
+    .type-bug { color: #ff5c5c; background: rgba(255,92,92,0.12); }
+    .type-story { color: #54d9a8; background: rgba(84,217,168,0.12); }
+    .type-task { color: #ff9f43; background: rgba(255,159,67,0.12); }
+    .type-feature { color: #a78bfa; background: rgba(167,139,250,0.12); }
+    .type-spike { color: #38bdf8; background: rgba(56,189,248,0.12); }
+    .type-initiative { color: #f472b6; background: rgba(244,114,182,0.12); }
+    .type-outcome { color: #c084fc; background: rgba(192,132,252,0.12); }
+    .component-tag { font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 4px; display: inline-block; margin: 0.1rem 0.15rem; font-weight: 500; }
+    .component-portal { color: var(--portal); background: var(--portal-bg); }
+    .component-devtools { color: var(--devtools); background: var(--devtools-bg); }
+    .component-networking { color: var(--networking); background: var(--networking-bg); }
+    .status-chip { font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 4px; color: var(--in-progress); background: var(--in-progress-bg); white-space: nowrap; }
+    .assignee { white-space: nowrap; }
+    .assignee.unassigned { color: var(--critical); font-style: italic; }
+    .empty-msg { color: var(--text-muted); font-style: italic; padding: 1rem 0; }
+    .footer { text-align: center; color: var(--text-muted); font-size: 0.78rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+    @media (max-width: 768px) {
+      body { padding: 1rem; }
+      .issue-table { font-size: 0.8rem; }
+      .issue-table td, .issue-table th { padding: 0.5rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>ANSTRAT, AAP & ACA — In Progress Dashboard</h1>
+    <div class="subtitle">Components: portal,dev-tools,controller &nbsp;|&nbsp; Generated: April 01, 2026</div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value" style="color:var(--accent)">40</div><div class="stat-label">Total Issues</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--critical)">13</div><div class="stat-label">Critical</div></div>
+    <div class="stat-card"><div class="stat-value">15</div><div class="stat-label">ANSTRAT</div></div>
+    <div class="stat-card"><div class="stat-value">22</div><div class="stat-label">AAP</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--networking)">3</div><div class="stat-label">ACA</div></div>
+  </div>
+  <div class="project-section">
+    <div class="project-header">
+      <h2>ANSTRAT</h2>
+      <span class="project-badge">15 issues</span>
+      <span class="project-filter">Components: portal,dev-tools,controller</span>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label critical">Critical (7)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Components</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1840">ANSTRAT-1840</a></td>
+            <td>Remove direct API access to platform components in AAP 2.7</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">John Hardy</td>
+            <td><span class="component-tag component-networking">aap-gateway</span><span class="component-tag component-networking">aap-ui</span><span class="component-tag component-networking">controller</span><span class="component-tag component-networking">docs-product</span><span class="component-tag component-networking">event-driven-ansible</span><span class="component-tag component-networking">hub</span><span class="component-tag component-networking">platform-installer</span><span class="component-tag component-networking">platform-operator</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 26</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1761">ANSTRAT-1761</a></td>
+            <td>Setup upstream and downstream portal repositories and onboard plugins to Konflux</td>
+            <td><span class="type-badge type-initiative">Initiative</span></td>
+            <td class="assignee">Ajinkya Udgirkar</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1737">ANSTRAT-1737</a></td>
+            <td>Integrate Automation Development into the platform experience</td>
+            <td><span class="type-badge type-outcome">Outcome</span></td>
+            <td class="assignee">Craig Brandt</td>
+            <td><span class="component-tag component-devtools">dev-tools</span><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1721">ANSTRAT-1721</a></td>
+            <td>Self-service - Technology Preview deploy on RHEL (VMDK and QCOW2 appliances)</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">Craig Brandt</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 31</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1534">ANSTRAT-1534</a></td>
+            <td>DevExp - Content discovery and catalog to support EE Builder experience</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">Emily Bock</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 31</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1283">ANSTRAT-1283</a></td>
+            <td>AAP 2.4 ELS Support</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">Dylan Silva</td>
+            <td><span class="component-tag component-networking">aap-ui-framework</span><span class="component-tag component-networking">analytics-hcc-service</span><span class="component-tag component-networking">content</span><span class="component-tag component-networking">controller</span><span class="component-tag component-networking">core</span><span class="component-tag component-networking">hub</span><span class="component-tag component-networking">platform-installer</span><span class="component-tag component-networking">platform-operator</span><span class="component-tag component-networking">receptor</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Apr 1</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-883">ANSTRAT-883</a></td>
+            <td>Improve the AAP platform experience - Ansible self-service</td>
+            <td><span class="type-badge type-outcome">Outcome</span></td>
+            <td class="assignee">Craig Brandt</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label major">Major (7)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Components</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1861">ANSTRAT-1861</a></td>
+            <td>Test Stability &amp; Modernization in Ansible VS Code Extension</td>
+            <td><span class="type-badge type-initiative">Initiative</span></td>
+            <td class="assignee">Sorin Sbarnea</td>
+            <td><span class="component-tag component-devtools">dev-tools</span><span class="component-tag component-networking">vscode-plugin</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1767">ANSTRAT-1767</a></td>
+            <td>Document MCP Server Framework for Customer-Managed Execution Environments</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">Clay Miller</td>
+            <td><span class="component-tag component-networking">community-engineering</span><span class="component-tag component-devtools">dev-tools</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 23</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1544">ANSTRAT-1544</a></td>
+            <td>RFE - [RFE] Add autocomplete=&quot;off&quot; to the UI and API login pages.</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">Emily Bock</td>
+            <td><span class="component-tag component-networking">aap-ui</span><span class="component-tag component-networking">controller</span><span class="component-tag component-networking">event-driven-ansible</span><span class="component-tag component-networking">hub</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1441">ANSTRAT-1441</a></td>
+            <td>Improve The Quality of AAP</td>
+            <td><span class="type-badge type-outcome">Outcome</span></td>
+            <td class="assignee">Ryan Williams</td>
+            <td><span class="component-tag component-networking">aap-gateway</span><span class="component-tag component-networking">aap-ui</span><span class="component-tag component-networking">controller</span><span class="component-tag component-networking">event-driven-ansible</span><span class="component-tag component-networking">hub</span><span class="component-tag component-networking">metrics-service</span><span class="component-tag component-networking">receptor</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1257">ANSTRAT-1257</a></td>
+            <td>Revamping Molecule for Enhanced Collection Testing</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">Tim Appnel</td>
+            <td><span class="component-tag component-devtools">dev-tools</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-119">ANSTRAT-119</a></td>
+            <td>Deliver a Cohesive Toolchain for the Ansible Content Lifecycle</td>
+            <td><span class="type-badge type-outcome">Outcome</span></td>
+            <td class="assignee">Tim Appnel</td>
+            <td><span class="component-tag component-networking">aap-workspaces</span><span class="component-tag component-networking">community-engineering</span><span class="component-tag component-devtools">dev-tools</span><span class="component-tag component-networking">vscode-plugin</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 23</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-8">ANSTRAT-8</a></td>
+            <td>Provide a scaffolding tool for content creators</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">Tim Appnel</td>
+            <td><span class="component-tag component-devtools">dev-tools</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 23</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label undefined">Undefined (1)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Components</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ANSTRAT-1504">ANSTRAT-1504</a></td>
+            <td>Controller : Scale Out Indirect Content for collections that red hat has no control</td>
+            <td><span class="type-badge type-feature">Feature</span></td>
+            <td class="assignee">Dylan Silva</td>
+            <td><span class="component-tag component-networking">content</span><span class="component-tag component-networking">controller</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 30</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="project-section">
+    <div class="project-header">
+      <h2>AAP</h2>
+      <span class="project-badge">22 epics</span>
+      <span class="project-filter">Epics only | Components: portal,dev-tools,controller</span>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label critical">Critical (6)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Components</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-68186">AAP-68186</a></td>
+            <td>Testing</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Ajinkya Udgirkar</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-68176">AAP-68176</a></td>
+            <td>Disconnected Environment Support</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Ajinkya Udgirkar</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-65493">AAP-65493</a></td>
+            <td>UX Support for AAP 2.7 </td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Taufique Rahman</td>
+            <td><span class="component-tag component-networking">aap-gateway</span><span class="component-tag component-networking">aap-ui</span><span class="component-tag component-networking">analytics-hcc-service</span><span class="component-tag component-networking">automation-dashboard</span><span class="component-tag component-networking">controller</span><span class="component-tag component-devtools">dev-tools</span><span class="component-tag component-networking">event-driven-ansible</span><span class="component-tag component-networking">hub</span><span class="component-tag component-networking">nexus</span><span class="component-tag component-portal">portal</span><span class="component-tag component-networking">UXD</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 24</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-65051">AAP-65051</a></td>
+            <td>Develop UI views for collections, execution environments and git repositories</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Abhinav Anand</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-63393">AAP-63393</a></td>
+            <td>Enhancements to Execution Environment software templates workflow</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Nilashish Chakraborty</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-55496">AAP-55496</a></td>
+            <td>Update portal documentation for the current release version</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Jaroslav Klech</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label major">Major (7)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Components</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-68183">AAP-68183</a></td>
+            <td>Bootc Upgrade Support (In-Place Upgrade)</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Ajinkya Udgirkar</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 26</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-66187">AAP-66187</a></td>
+            <td>Testing — RHEL Deployment Technology Preview Validation</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Sandeep Shedmake</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-63254">AAP-63254</a></td>
+            <td>[Devtools] Migrate Devtools UI Tests to stable frameworks</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Sorin Sbarnea</td>
+            <td><span class="component-tag component-devtools">dev-tools</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-63253">AAP-63253</a></td>
+            <td>[Devtools] extension build pipelines failures and Build Framework Migration</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Sorin Sbarnea</td>
+            <td><span class="component-tag component-devtools">dev-tools</span><span class="component-tag component-networking">vscode-plugin</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-57614">AAP-57614</a></td>
+            <td>External Query File Delivery for Indirect Node Counting</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Dirk Julich</td>
+            <td><span class="component-tag component-networking">content</span><span class="component-tag component-networking">controller</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 31</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-44845">AAP-44845</a></td>
+            <td>Standardize and increase test coverage for AAP upstream components</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Thomas Tuffin</td>
+            <td><span class="component-tag component-networking">aap-gateway</span><span class="component-tag component-networking">controller</span><span class="component-tag component-networking">event-driven-ansible</span><span class="component-tag component-networking">hub</span><span class="component-tag component-networking">receptor</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-31611">AAP-31611</a></td>
+            <td>Controller Operation Green ATF</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Adria Sala</td>
+            <td><span class="component-tag component-networking">controller</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label normal">Normal (6)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Components</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-68249">AAP-68249</a></td>
+            <td>Ankit Learnings.</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Ankit Sharma</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 31</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-64505">AAP-64505</a></td>
+            <td>Implement JWT Authentication for HashiCorp Vault</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Pablo Hiroshi Alonso</td>
+            <td><span class="component-tag component-networking">aap-gateway</span><span class="component-tag component-networking">controller</span><span class="component-tag component-networking">django-ansible-base</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-62149">AAP-62149</a></td>
+            <td>Custom SCM Integration Support</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Sandeep Shedmake</td>
+            <td><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-58770">AAP-58770</a></td>
+            <td>Monitoring health of non-AAP components</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Mike Silmser</td>
+            <td><span class="component-tag component-devtools">dev-tools</span><span class="component-tag component-networking">execution-environments</span><span class="component-tag component-networking">internal-dashboard</span><span class="component-tag component-networking">lightspeed</span><span class="component-tag component-portal">portal</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-51345">AAP-51345</a></td>
+            <td>Epic to track customer facing tech-debt</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Alan Rominger</td>
+            <td><span class="component-tag component-networking">continuous-improvement</span><span class="component-tag component-networking">controller</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-26496">AAP-26496</a></td>
+            <td>Resolve AWX Dependency Warnings</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Jessica Mack</td>
+            <td><span class="component-tag component-networking">continuous-improvement</span><span class="component-tag component-networking">controller</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label undefined">Undefined (3)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Components</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-64690">AAP-64690</a></td>
+            <td>[QE] Test and verification of direct API access removal in AAP 2.7</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Adria Sala</td>
+            <td><span class="component-tag component-networking">controller</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 27</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-58184">AAP-58184</a></td>
+            <td>Onboard remaining AAP repositories to SonarCloud for code coverage standardization</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Thomas Tuffin</td>
+            <td><span class="component-tag component-networking">aap-gateway</span><span class="component-tag component-networking">controller</span><span class="component-tag component-networking">event-driven-ansible</span><span class="component-tag component-networking">hub</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/AAP-34483">AAP-34483</a></td>
+            <td>[Controller] [API] Rewrite Webhook-receiver tests in ATF test-suite and/or upstream</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Luis Villa</td>
+            <td><span class="component-tag component-networking">controller</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 20</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="project-section">
+    <div class="project-header">
+      <h2>ACA</h2>
+      <span class="project-badge">3 epics</span>
+      <span class="project-filter">Epics only | Workstream: Networking Content</span>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label major">Major (1)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Workstream</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ACA-3752">ACA-3752</a></td>
+            <td>Ensure that known ansible-pylibssh blockers are resolved since paramiko is deprecated from ansible-core</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Sagar Paul</td>
+            <td><span class="component-tag component-networking">Networking Content</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="priority-group">
+      <span class="priority-label undefined">Undefined (2)</span>
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Assignee</th><th>Workstream</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ACA-5141">ACA-5141</a></td>
+            <td>Learning activity and progress tracking - Jayant</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Jayant Sogikar</td>
+            <td><span class="component-tag component-networking">Networking Content</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+          <tr>
+            <td class="issue-key"><a href="https://redhat.atlassian.net/browse/ACA-3702">ACA-3702</a></td>
+            <td>Leveraging the use if LightSpeed for network validated content</td>
+            <td><span class="type-badge type-epic">Epic</span></td>
+            <td class="assignee">Ruchi Pakhle</td>
+            <td><span class="component-tag component-networking">Networking Content</span></td>
+            <td><span class="status-chip">In Progress</span></td>
+            <td class="updated-date">Mar 19</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="footer">
+    JIRA Dashboard &mdash; ANSTRAT, AAP &amp; ACA &mdash; Generated April 01, 2026 &mdash; Status: In Progress
+  </div>
+</body>
+</html>
